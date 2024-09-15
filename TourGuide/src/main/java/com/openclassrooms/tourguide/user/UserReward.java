@@ -3,6 +3,8 @@ package com.openclassrooms.tourguide.user;
 import gpsUtil.location.Attraction;
 import gpsUtil.location.VisitedLocation;
 
+import java.util.Objects;
+
 public class UserReward {
 
 	public final VisitedLocation visitedLocation;
@@ -26,5 +28,26 @@ public class UserReward {
 	public int getRewardPoints() {
 		return rewardPoints;
 	}
-	
+
+	public VisitedLocation getVisitedLocation() {
+		return visitedLocation;
+	}
+
+	public Attraction getAttraction() {
+		return attraction;
+	}
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		UserReward that = (UserReward) o;
+		return rewardPoints == that.rewardPoints &&
+				Objects.equals(visitedLocation, that.visitedLocation) &&
+				Objects.equals(attraction, that.attraction);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(visitedLocation, attraction, rewardPoints);
+	}
 }

@@ -7,17 +7,16 @@ import com.openclassrooms.tourguide.user.UserReward;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -27,22 +26,25 @@ import gpsUtil.location.Attraction;
 import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
 
+import rewardCentral.RewardCentral;
 import tripPricer.Provider;
 import tripPricer.TripPricer;
+
 
 @Service
 public class TourGuideService {
 	private Logger logger = LoggerFactory.getLogger(TourGuideService.class);
 	private final GpsUtil gpsUtil;
 	private final RewardsService rewardsService;
-	private final TripPricer tripPricer = new TripPricer();
+	public TripPricer tripPricer = new TripPricer();
+	private final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 	public final Tracker tracker;
 	boolean testMode = true;
 
 	public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService) {
 		this.gpsUtil = gpsUtil;
 		this.rewardsService = rewardsService;
-		
+
 		Locale.setDefault(Locale.US);
 
 		if (testMode) {
@@ -54,31 +56,53 @@ public class TourGuideService {
 		tracker = new Tracker(this);
 		addShutDownHook();
 	}
-
-	public List<UserReward> getUserRewards(User user) {
-		return user.getUserRewards();
+	public void getUserLocationAsync(User user, TourGuideService tourGuideService) {
+		CompletableFuture.supplyAsync(() -> {
+					return gpsUtil.getUserLocation(user.getUserId());
+				}, executorService)
+				.thenAccept(visitedLocation -> { tourGuideService.finalizeLocation(user, visitedLocation); });
 	}
+	public JSONArray getNearByAttractions(VisitedLocation visitedLocation) {
+		// List to store attractions with distance from the user
+		List<JSONObject> nearbyAttractions = new ArrayList<>();
 
-	public VisitedLocation getUserLocation(User user) {
-		VisitedLocation visitedLocation = (user.getVisitedLocations().size() > 0) ? user.getLastVisitedLocation()
-				: trackUserLocation(user);
-		return visitedLocation;
-	}
+		// User's location
+		Location userLocation = visitedLocation.location;
 
-	public User getUser(String userName) {
-		return internalUserMap.get(userName);
-	}
+		// Loop through all attractions and calculate distances
+		for (Attraction attraction : gpsUtil.getAttractions()) {
+			// Calculate the distance between user location and attraction
+			double distance = rewardsService.getDistance(userLocation, new Location(attraction.latitude, attraction.longitude));
 
-	public List<User> getAllUsers() {
-		return internalUserMap.values().stream().collect(Collectors.toList());
-	}
+			// Fetch reward points from RewardsCentral
+			int rewardPoints = rewardsService.getRewardPoints(attraction, visitedLocation.userId);
 
-	public void addUser(User user) {
-		if (!internalUserMap.containsKey(user.getUserName())) {
-			internalUserMap.put(user.getUserName(), user);
+			// Create JSON object for each attraction
+			JSONObject attractionInfo = new JSONObject();
+			attractionInfo.put("attractionName", attraction.attractionName);
+			attractionInfo.put("attractionLatitude", attraction.latitude);
+			attractionInfo.put("attractionLongitude", attraction.longitude);
+			attractionInfo.put("userLatitude", userLocation.latitude);
+			attractionInfo.put("userLongitude", userLocation.longitude);
+			attractionInfo.put("distance", distance);
+			attractionInfo.put("rewardPoints", rewardPoints);
+
+			// Add the object to the list
+			nearbyAttractions.add(attractionInfo);
 		}
-	}
 
+		// Sort the attractions by distance (ascending)
+		nearbyAttractions.sort(Comparator.comparingDouble(a -> a.getDouble("distance")));
+
+		// Get the closest 5 attractions
+		JSONArray closestAttractions = new JSONArray();
+		for (int i = 0; i < Math.min(5, nearbyAttractions.size()); i++) {
+			closestAttractions.put(nearbyAttractions.get(i));
+		}
+
+		// Return the closest 5 attractions as JSON
+		return closestAttractions;
+	}
 	public List<Provider> getTripDeals(User user) {
 		int cumulatativeRewardPoints = user.getUserRewards().stream().mapToInt(i -> i.getRewardPoints()).sum();
 		List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(),
@@ -88,30 +112,56 @@ public class TourGuideService {
 		return providers;
 	}
 
-	public VisitedLocation trackUserLocation(User user) {
-		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
-		user.addToVisitedLocations(visitedLocation);
-		rewardsService.calculateRewards(user);
-		return visitedLocation;
-	}
-
-	public List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
-		List<Attraction> nearbyAttractions = new ArrayList<>();
-		for (Attraction attraction : gpsUtil.getAttractions()) {
-			if (rewardsService.isWithinAttractionProximity(attraction, visitedLocation.location)) {
-				nearbyAttractions.add(attraction);
-			}
-		}
-
-		return nearbyAttractions;
-	}
-
 	private void addShutDownHook() {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
+				System.out.println("Shutdown UserService");
 				tracker.stopTracking();
 			}
 		});
+	}
+
+
+	public VisitedLocation getUserLocation(User user) {
+		return user.getVisitedLocations().get(0);
+	}
+
+	public void trackUserLocation(User user) {
+		getUserLocationAsync(user, this);
+	}
+	public void finalizeLocation(User user, VisitedLocation visitedLocation) {
+		user.addToVisitedLocations(visitedLocation);
+		rewardsService.calculateRewards(user);
+		tracker.finalizeTrack(user);
+	}
+
+	public List<UserReward> getUserRewards(User user) {
+		return user.getUserRewards();
+	}
+
+	public void addUser(User user) {
+		internalUserMap.put(user.getUserName(), user);
+	}
+
+	public User getUser(String userName) {
+		return internalUserMap.get(userName);
+	}
+
+	public List<User> getAllUsers() {
+		return new ArrayList<>(internalUserMap.values());
+	}
+	public Map<UUID, VisitedLocation> getAllUsersLocations() {
+		Map<UUID, VisitedLocation> userLocations = new HashMap<>();
+
+		// Assuming you have a method to get all users
+		List<User> users = getAllUsers(); // Method to retrieve all users
+
+		for (User user : users) {
+			VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
+			userLocations.put(user.getUserId(), visitedLocation);
+		}
+
+		return userLocations;
 	}
 
 	/**********************************************************************************
@@ -122,7 +172,7 @@ public class TourGuideService {
 	private static final String tripPricerApiKey = "test-server-api-key";
 	// Database connection will be used for external users, but for testing purposes
 	// internal users are provided and stored in memory
-	private final Map<String, User> internalUserMap = new HashMap<>();
+	private final Map<String, User> internalUserMap = new ConcurrentHashMap<>();
 
 	private void initializeInternalUsers() {
 		IntStream.range(0, InternalTestHelper.getInternalUserNumber()).forEach(i -> {
