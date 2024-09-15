@@ -55,7 +55,7 @@
 
 		<dependency>
 			<groupId>TripPricer</groupId>
-			<artifactId>tripPricer</artifactId>
+			<artifactId>TripPricer</artifactId>
 			<version>1.0.0</version>
 		</dependency>
 		<dependency>
@@ -78,7 +78,7 @@
 
 		<dependency>
 			<groupId>RewardCentral</groupId>
-			<artifactId>rewardCentral</artifactId>
+			<artifactId>RewardCentral</artifactId>
 			<version>1.0.0</version>
 		</dependency>
 	</dependencies>
