@@ -52,15 +52,15 @@
 			<artifactId>gpsUtil</artifactId>
 			<version>1.0.0</version>
 			<scope>system</scope>
-			<systemPath>${project.basedir}/libs/gpsUtil.jar</systemPath>
+    			<systemPath>${project.basedir}/libs/gpsUtil.jar</systemPath>
 		</dependency>
 
 		<dependency>
-			<groupId>tripPricer</groupId>
-			<artifactId>tripPricer</artifactId>
+			<groupId>TripPricer</groupId>
+			<artifactId>TripPricer</artifactId>
 			<version>1.0.0</version>
 			<scope>system</scope>
-			<systemPath>${project.basedir}/libs/tripPricer.jar</systemPath>
+    			<systemPath>${project.basedir}/libs/TripPricer.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>org.json</groupId>
@@ -81,11 +81,11 @@
 
 
 		<dependency>
-			<groupId>rewardCentral</groupId>
-			<artifactId>rewardCentral</artifactId>
+			<groupId>RewardCentral</groupId>
+			<artifactId>RewardCentral</artifactId>
 			<version>1.0.0</version>
 			<scope>system</scope>
-			<systemPath>${project.basedir}/libs/rewardCentral.jar</systemPath>
+    			<systemPath>${project.basedir}/libs/RewardCentral.jar</systemPath>
 		</dependency>
 	</dependencies>
 
