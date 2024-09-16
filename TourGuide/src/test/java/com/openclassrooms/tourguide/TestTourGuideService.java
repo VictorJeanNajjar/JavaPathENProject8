@@ -134,6 +134,9 @@ public class TestTourGuideService {
     public void getTripDeals() throws Exception {
         User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
         user.setUserPreferences(new UserPreferences());
+        Optional<Integer> numberOfAdultsOpt = Optional.empty();
+        Optional<Integer> numberOfChildrenOpt = Optional.empty();
+        Optional<Integer> tripDurationOpt = Optional.empty();
 
         // Mock the response from tripPricer.getPrice
         List<Provider> mockProviders = List.of(
@@ -154,7 +157,7 @@ public class TestTourGuideService {
         )).thenReturn(mockProviders);
 
         // Call the method to get the list of providers
-        List<Provider> resultProviders = tourGuideService.getTripDeals(user);
+        List<Provider> resultProviders = tourGuideService.getTripDeals(user, numberOfAdultsOpt, numberOfChildrenOpt, tripDurationOpt);
 
         // Verify the interaction with tripPricer
         verify(tripPricer).getPrice(

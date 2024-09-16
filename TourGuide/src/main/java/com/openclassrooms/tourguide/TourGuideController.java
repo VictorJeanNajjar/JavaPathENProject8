@@ -1,6 +1,7 @@
 package com.openclassrooms.tourguide;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import org.json.JSONArray;
@@ -45,8 +46,14 @@ public class TourGuideController {
     }
 
     @RequestMapping("/getTripDeals")
-    public List<Provider> getTripDeals(@RequestParam String userName){
-    	return tourGuideService.getTripDeals(getUser(userName));
+    public List<Provider> getTripDeals(@RequestParam String userName,
+                                       @RequestParam Optional<Integer> numberOfAdultsOpt,
+                                       @RequestParam Optional<Integer> numberOfChildrenOpt,
+                                       @RequestParam Optional<Integer> tripDurationOpt){
+    	return tourGuideService.getTripDeals(getUser(userName),
+                numberOfAdultsOpt,
+                numberOfChildrenOpt,
+                tripDurationOpt);
     }
 
     private User getUser(String userName) {

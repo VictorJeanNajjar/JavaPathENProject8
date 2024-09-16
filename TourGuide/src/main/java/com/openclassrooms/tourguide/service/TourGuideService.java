@@ -3,6 +3,7 @@ package com.openclassrooms.tourguide.service;
 import com.openclassrooms.tourguide.helper.InternalTestHelper;
 import com.openclassrooms.tourguide.tracker.Tracker;
 import com.openclassrooms.tourguide.user.User;
+import com.openclassrooms.tourguide.user.UserPreferences;
 import com.openclassrooms.tourguide.user.UserReward;
 
 import java.time.LocalDateTime;
@@ -103,11 +104,18 @@ public class TourGuideService {
 		// Return the closest 5 attractions as JSON
 		return closestAttractions;
 	}
-	public List<Provider> getTripDeals(User user) {
-		int cumulatativeRewardPoints = user.getUserRewards().stream().mapToInt(i -> i.getRewardPoints()).sum();
+	public List<Provider> getTripDeals(User user, Optional<Integer> numberOfAdultsOpt,
+									   Optional<Integer> numberOfChildrenOpt,
+									   Optional<Integer> tripDurationOpt){
+		int cumulativeRewardPoints = user.getUserRewards().stream().mapToInt(UserReward::getRewardPoints).sum();
+		UserPreferences preferences = user.getUserPreferences();
+		int numberOfAdults = numberOfAdultsOpt.orElseGet(preferences::getNumberOfAdults);
+		int numberOfChildren = numberOfChildrenOpt.orElseGet(preferences::getNumberOfChildren);
+		int tripDuration = tripDurationOpt.orElseGet(preferences::getTripDuration);
+
 		List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(),
-				user.getUserPreferences().getNumberOfAdults(), user.getUserPreferences().getNumberOfChildren(),
-				user.getUserPreferences().getTripDuration(), cumulatativeRewardPoints);
+				numberOfAdults, numberOfChildren, tripDuration, cumulativeRewardPoints);
+
 		user.setTripDeals(providers);
 		return providers;
 	}
