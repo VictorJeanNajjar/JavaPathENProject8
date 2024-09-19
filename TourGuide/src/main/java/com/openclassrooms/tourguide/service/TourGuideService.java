@@ -94,7 +94,6 @@ public class TourGuideService {
 
 		// Sort the attractions by distance (ascending)
 		nearbyAttractions.sort(Comparator.comparingDouble(a -> a.getDouble("distance")));
-
 		// Get the closest 5 attractions
 		JSONArray closestAttractions = new JSONArray();
 		for (int i = 0; i < Math.min(5, nearbyAttractions.size()); i++) {

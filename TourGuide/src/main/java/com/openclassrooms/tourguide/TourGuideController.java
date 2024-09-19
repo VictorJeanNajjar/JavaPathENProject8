@@ -6,6 +6,8 @@ import java.util.concurrent.ExecutionException;
 
 import org.json.JSONArray;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,11 +37,16 @@ public class TourGuideController {
     	return tourGuideService.getUserLocation(getUser(userName));
     }
     @RequestMapping("/getNearbyAttractions")
-    public JSONArray getNearbyAttractions(@RequestParam String userName) {
-    	VisitedLocation visitedLocation = tourGuideService.getUserLocation(getUser(userName));
-    	return tourGuideService.getNearByAttractions(visitedLocation);
-    }
+    public ResponseEntity<String> getNearbyAttractions(@RequestParam String userName) {
+        VisitedLocation visitedLocation = tourGuideService.getUserLocation(getUser(userName));
+        JSONArray jsonArray = tourGuideService.getNearByAttractions(visitedLocation);
 
+        // Return the JSONArray as a string and set the content type to application/json
+        return ResponseEntity
+                .ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(jsonArray.toString());
+    }
     @RequestMapping("/getRewards")
     public List<UserReward> getRewards(@RequestParam String userName) {
     	return tourGuideService.getUserRewards(getUser(userName));

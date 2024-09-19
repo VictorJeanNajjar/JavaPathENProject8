@@ -174,5 +174,93 @@ public class TestTourGuideService {
         assertEquals(mockProviders, resultProviders);
         assertEquals(mockProviders, user.getTripDeals()); // Ensure user’s tripDeals is also updated
     }
+    @Test
+    public void getTripDealsSomeFilled() throws Exception {
+        User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+        user.setUserPreferences(new UserPreferences());
+        Optional<Integer> numberOfAdultsOpt = Optional.of(5);
+        Optional<Integer> numberOfChildrenOpt = Optional.of(5);
+        Optional<Integer> tripDurationOpt = Optional.empty();
+
+        // Mock the response from tripPricer.getPrice
+        List<Provider> mockProviders = List.of(
+                new Provider(UUID.randomUUID(), "Provider1", 100.0),
+                new Provider(UUID.randomUUID(), "Provider2", 200.0),
+                new Provider(UUID.randomUUID(), "Provider3", 300.0),
+                new Provider(UUID.randomUUID(), "Provider4", 400.0),
+                new Provider(UUID.randomUUID(), "Provider5", 500.0)
+        );
+
+        when(tripPricer.getPrice(
+                anyString(),          // API key
+                any(UUID.class),     // Attraction ID
+                anyInt(),             // Number of adults
+                anyInt(),             // Number of children
+                anyInt(),             // Trip duration (nights stay)
+                anyInt()              // Reward points
+        )).thenReturn(mockProviders);
+
+        // Call the method to get the list of providers
+        List<Provider> resultProviders = tourGuideService.getTripDeals(user, numberOfAdultsOpt, numberOfChildrenOpt, tripDurationOpt);
+
+        // Verify the interaction with tripPricer
+        verify(tripPricer).getPrice(
+                anyString(),          // API key
+                eq(user.getUserId()), // User ID
+                eq(5), // Number of adults
+                eq(5), // Number of children
+                eq(user.getUserPreferences().getTripDuration()), // Trip duration
+                anyInt()              // Reward points (calculated cumulatively)
+        );
+
+        // Check that the result contains the expected number of providers
+        assertEquals(5, resultProviders.size());
+        assertEquals(mockProviders, resultProviders);
+        assertEquals(mockProviders, user.getTripDeals()); // Ensure user’s tripDeals is also updated
+    }
+    @Test
+    public void getTripDealsAllFilled() throws Exception {
+        User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+        user.setUserPreferences(new UserPreferences());
+        Optional<Integer> numberOfAdultsOpt = Optional.of(5);
+        Optional<Integer> numberOfChildrenOpt = Optional.of(5);
+        Optional<Integer> tripDurationOpt = Optional.of(5);
+
+        // Mock the response from tripPricer.getPrice
+        List<Provider> mockProviders = List.of(
+                new Provider(UUID.randomUUID(), "Provider1", 100.0),
+                new Provider(UUID.randomUUID(), "Provider2", 200.0),
+                new Provider(UUID.randomUUID(), "Provider3", 300.0),
+                new Provider(UUID.randomUUID(), "Provider4", 400.0),
+                new Provider(UUID.randomUUID(), "Provider5", 500.0)
+        );
+
+        when(tripPricer.getPrice(
+                anyString(),          // API key
+                any(UUID.class),     // Attraction ID
+                anyInt(),             // Number of adults
+                anyInt(),             // Number of children
+                anyInt(),             // Trip duration (nights stay)
+                anyInt()              // Reward points
+        )).thenReturn(mockProviders);
+
+        // Call the method to get the list of providers
+        List<Provider> resultProviders = tourGuideService.getTripDeals(user, numberOfAdultsOpt, numberOfChildrenOpt, tripDurationOpt);
+
+        // Verify the interaction with tripPricer
+        verify(tripPricer).getPrice(
+                anyString(),          // API key
+                eq(user.getUserId()), // User ID
+                eq(5), // Number of adults
+                eq(5), // Number of children
+                eq(5), // Trip duration
+                anyInt()              // Reward points (calculated cumulatively)
+        );
+
+        // Check that the result contains the expected number of providers
+        assertEquals(5, resultProviders.size());
+        assertEquals(mockProviders, resultProviders);
+        assertEquals(mockProviders, user.getTripDeals()); // Ensure user’s tripDeals is also updated
+    }
 }
 
